@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ollama Test Case Generator</title>
+    <!-- Use marked from CDN for Markdown parsing -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.5);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+            box-sizing: border-box;
+        }
+
+        .messages-area {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            padding-bottom: 2rem;
+        }
+
+        .message {
+            display: flex;
+            gap: 1rem;
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+
+        .avatar.ai {
+            background: linear-gradient(135deg, var(--accent), #2563eb);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .avatar.u {
+            background: var(--bg-secondary);
+            border: 1px solid var(--text-secondary);
+        }
+
+        .bubble {
+            background: var(--bg-secondary);
+            padding: 1rem 1.5rem;
+            border-radius: 1rem;
+            border-top-left-radius: 2px;
+            line-height: 1.6;
+            max-width: 85%;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .message.user .bubble {
+            background: var(--accent);
+            color: white;
+            border-radius: 1rem;
+            border-top-right-radius: 2px;
+        }
+
+        /* Markdown Styles */
+        .bubble h1,
+        .bubble h2,
+        .bubble h3 {
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+            color: #fff;
+        }
+
+        .bubble code {
+            font-family: 'Fira Code', monospace;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 4px;
+            border-radius: 4px;
+        }
+
+        .bubble pre {
+            background: #020617;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            border: 1px solid #334155;
+        }
+
+        .bubble pre code {
+            background: none;
+            padding: 0;
+        }
+
+        .bubble ul,
+        .bubble ol {
+            margin-left: 1.5rem;
+        }
+
+        .input-area {
+            position: sticky;
+            bottom: 2rem;
+            background: rgba(30, 41, 59, 0.9);
+            padding: 1rem;
+            border-radius: 1rem;
+            border: 1px solid #334155;
+            display: flex;
+            gap: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        button.send-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        button.send-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .copy-btn {
+            margin-top: 10px;
+            font-size: 0.75rem;
+            padding: 4px 8px;
+            background: #334155;
+            color: #ccc;
+            border: 1px solid #475569;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            float: right;
+        }
+
+        .copy-btn:hover {
+            background: #475569;
+            color: white;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="chat-container">
+        <div class="messages-area" id="messages">
+            <div class="message ai">
+                <div class="avatar ai">🤖</div>
+                <div class="bubble">
+                    👋 Hi! I am your Local QA Architect. Describe the feature you need test cases for.
+                </div>
+            </div>
+        </div>
+
+        <form class="input-area" id="chatForm">
+            <input type="text" id="userInput" placeholder="e.g. Create tests for a login page..." autocomplete="off">
+            <button type="submit" id="sendBtn" class="send-btn">Generate 🚀</button>
+        </form>
+    </div>
+
+    <script>
+        const form = document.getElementById('chatForm');
+        const input = document.getElementById('userInput');
+        const messagesDiv = document.getElementById('messages');
+        const sendBtn = document.getElementById('sendBtn');
+
+        function addMessage(role, text, id = null) {
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${role}`;
+            if (id) msgDiv.id = id;
+
+            const avatar = document.createElement('div');
+            avatar.className = `avatar ${role === 'user' ? 'u' : 'ai'}`;
+            avatar.textContent = role === 'user' ? '👤' : '🤖';
+
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+
+            // Render Markdown
+            if (typeof marked !== 'undefined') {
+                bubble.innerHTML = marked.parse(text);
+            } else {
+                bubble.textContent = text;
+            }
+
+            // Add Copy Button for Assistant messages (completed ones)
+            if (role === 'ai' && !id && text.length > 50) {
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-btn';
+                copyBtn.innerHTML = '📋 Copy';
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(text);
+                    copyBtn.innerHTML = '✅ Copied!';
+                    setTimeout(() => copyBtn.innerHTML = '📋 Copy', 2000);
+                };
+                bubble.appendChild(copyBtn);
+            }
+
+            msgDiv.appendChild(avatar);
+            msgDiv.appendChild(bubble);
+            messagesDiv.appendChild(msgDiv);
+
+            msgDiv.scrollIntoView({ behavior: 'smooth' });
+            return bubble;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const text = input.value.trim();
+            if (!text) return;
+
+            addMessage('user', text);
+            input.value = '';
+            sendBtn.disabled = true;
+
+            const bubble = addMessage('ai', '...', 'streaming-bubble');
+            let fullResponse = '';
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                fullResponse = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value, { stream: true });
+                    fullResponse += chunk;
+
+                    if (typeof marked !== 'undefined') {
+                        bubble.innerHTML = marked.parse(fullResponse);
+                    } else {
+                        bubble.textContent = fullResponse;
+                    }
+                    messagesDiv.lastElementChild.scrollIntoView({ behavior: 'smooth' });
+                }
+
+                // Stream finished: Add copy button now
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-btn';
+                copyBtn.innerHTML = '📋 Copy';
+                copyBtn.onclick = () => {
+                    navigator.clipboard.writeText(fullResponse);
+                    copyBtn.innerHTML = '✅ Copied!';
+                    setTimeout(() => copyBtn.innerHTML = '📋 Copy', 2000);
+                };
+                bubble.appendChild(copyBtn);
+
+                // Remove ID so it's not treated as streaming anymore
+                bubble.parentElement.removeAttribute('id');
+
+            } catch (error) {
+                bubble.textContent = '❌ Error: ' + error.message;
+            } finally {
+                sendBtn.disabled = false;
+            }
+        });
+    </script>
+
+</body>
+
+</html>
