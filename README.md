@@ -14,16 +14,16 @@ This project follows the **A.N.T. (API, Negotiation, Terminal)** 3-Layer Archite
 
 ```mermaid
 graph TD
-    User[👤 User] -->|1. Enters Requirement| UI[🖥️ Frontend Terminal (HTML/JS)]
-    UI -->|2. POST /api/chat| API[⚙️ Backend API Layer (Node.js Native)]
+    User[User] -->|1. Enters Requirement| UI[Frontend Terminal]
+    UI -->|2. POST /api/chat| API[Backend API Layer]
     
-    subgraph "Layer 2: Negotiation"
-        API -->|3. formatPrompt()| Template[📝 Prompt Engine]
-        Template -->|4. Stream Request| OllamaService[🤖 Ollama Service]
+    subgraph Layer2 [Layer 2: Negotiation]
+        API -->|3. formatPrompt| Template[Prompt Engine]
+        Template -->|4. Stream Request| OllamaService[Ollama Service]
     end
     
-    subgraph "Layer 3: Tools & Inference"
-        OllamaService -->|5. HTTP Requests| LocalLLM[🦙 Ollama (llama3.2:3b)]
+    subgraph Layer3 [Layer 3: Tools and Inference]
+        OllamaService -->|5. HTTP Requests| LocalLLM[Ollama Local Model]
     end
     
     LocalLLM -->|6. Streaming Tokens| OllamaService
